@@ -14,18 +14,9 @@ const cors = require("cors");
 admin.initializeApp(functions.config().firebase);
 
 const app = express();
-app.use(cors({ origin: true }));
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-//app.use(cors({ origin: true }));
-// app.use(cors(), function (req, res, next) {
-//   res.header("Access-Control-Allow-Origin", "https://fa-react-e0ea5.web.app/"); // update to match the domain you will make the request from
-//   res.header(
-//     "Access-Control-Allow-Headers",
-//     "Origin, X-Requested-With, Content-Type, Accept"
-//   );
-//   next();
-// });
 
 const db = admin.firestore();
 
