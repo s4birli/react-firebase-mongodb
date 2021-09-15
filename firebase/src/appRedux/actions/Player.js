@@ -16,7 +16,8 @@ export const newPlayer = (payload) => {
     dispatch({ type: FETCH_START });
     axios
       .post('player', payload)
-      .then(({ data }) => {
+      .then(({ object }) => {
+        array = [...object];
         if (data.result) {
           dispatch({ type: FETCH_SUCCESS });
           dispatch({ type: NEW_PLAYER, payload: data.player });

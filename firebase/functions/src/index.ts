@@ -7,6 +7,7 @@ import { Teams } from "./models/team.model";
 //import { Players } from "./models/player.model";
 //import * as cors from "cors";
 import * as jwt from "jsonwebtoken";
+import { Players } from "./models/player.model";
 const cors = require("cors");
 
 //const cors = require("cors")({ origin: true });
@@ -69,42 +70,57 @@ app.post("/auth/login", async (req, res) => {
 //Team\\
 //** Add **/
 app.post("/team", async (req, res) => {
-  const name = req.body.name;
-  const nationality = req.body.nationality;
-  const players = req.body.players;
+  try {
+    const name = req.body.name || null;
+    const nationality = req.body?.nationality || "";
+    const players = req.body?.players || [];
+    const TeamsCollection = db.collection("Teams");
+    const team: Teams = {
+      name: name,
+      nationality: nationality,
+      players: players,
+    };
 
-  const TeamsCollection = db.collection("Teams");
-  const team: Teams = {
-    name: name,
-    nationality: nationality,
-    players: players,
-  };
+    const teamDocument = await TeamsCollection.where(
+      "name",
+      "==",
+      team.name
+    ).get();
 
-  const teamDocument = await TeamsCollection.where(
-    "name",
-    "==",
-    team.name
-  ).get();
-
-  if (teamDocument.empty) {
-    const newTeam = await TeamsCollection.add(team);
-    res.status(200).json({
-      result: true,
-      team: newTeam,
-    });
-  } else {
-    res.json({
-      result: false,
-      team: {},
+    if (teamDocument.empty) {
+      const newTeam = await TeamsCollection.add(team);
+      res.status(200).json({
+        result: true,
+        team: newTeam,
+      });
+    } else {
+      res.json({
+        result: false,
+        team: {},
+      });
+    }
+  } catch (error) {
+    console.log;
+    res.status(500).json({
+      error: error,
     });
   }
 });
 
 //** Update **/
 app.put("/team", async (req, res) => {
-  //   const name = req.body.name;
-  //   const nationality = req.body.nationality;
-  //   const players = req.body.players;
+  const { _id, name, nationality, players } = req.body;
+  const teamDocuments = await db.collection("Teams").doc(_id);
+  await teamDocuments.update({
+    name,
+    nationality,
+    players,
+  });
+  const team = (await db.collection("Teams").doc(_id).get()).data();
+  return res.json({
+    result: true,
+    team,
+  });
 });
 
 //** GetAll **/
@@ -112,22 +128,20 @@ app.get("/team", async (req, res) => {
   const teamDocuments = await db.collection("Teams").get();
   res.status(200).json({
     result: true,
-    teams: teamDocuments,
+    teams: teamDocuments.docs.map((doc) => {
+      return {
+        ...doc.data(),
+        _id: doc.id,
+      };
+    }),
   });
 });
 
 //** Delete by name **/
 app.delete("/team/:id", async (req, res) => {
-  const id = req.body.id;
-  const teamDocuments = await db.collection("Teams").where("id", "==", id);
+  const { id } = req.params;
+  await db.collection("Teams").doc(id).delete();
 
-  teamDocuments.get().then(function (querySnapshot) {
-    querySnapshot.forEach(function (doc) {
-      doc.ref.delete();
-    });
-  });
-
-  //
   res.status(200).json({
     result: true,
   });
@@ -136,50 +150,53 @@ app.delete("/team/:id", async (req, res) => {
 //Player\\
 //** Add **/
 app.post("/player", async (req, res) => {
-  res.status(200).json({
-    result: false,
-    player: { name: req.body.name },
-  });
-  // try{
-  //     const name = req.body.name;
-  //     const lastName = req.body.lastName;
-  //     const nationality = req.body.nationality;
-  //     const birthday = req.body.birthday;
-  //     const position = req.body.position;
-  //     const team = req.body.team;
+  try {
+    const name = req.body?.name || null;
+    const lastName = req.body?.lastName || "";
+    const nationality = req.body?.nationality || "";
+    const birthday = req.body?.birthday || "";
+    const position = req.body?.position || [];
+    const team = req.body?.team || null;
 
-  //     const PlayerCollection = db.collection("Players");
-  //     const player: Players = {
-  //       name: name,
-  //       lastName: lastName,
-  //       nationality: nationality,
-  //       birthday: birthday,
-  //       position: position,
-  //       team: team,
-  //     };
+    const PlayerCollection = db.collection("Players");
+    const player: Players = {
+      name: name,
+      lastName: lastName,
+      nationality: nationality,
+      birthday: birthday,
+      position: position,
+      team: team,
+    };
 
-  //     const newPlayer = await PlayerCollection.add(player);
-  //     res.status(200).json({
-  //       result: true,
-  //       player: newPlayer,
-  //     });
-  // }
-  // catch{
-  //     res.status(200).json({
-  //         result: false,
-  //         player: {},
-  //       });
-  // }
+    const newPlayer = await PlayerCollection.add(player);
+    res.status(200).json({
+      result: true,
+      player: (await newPlayer.get()).data(),
+    });
+  } catch (error) {
+    console.log;
+    res.status(500).json({
+      error: error,
+    });
+  }
 });
 
 //** Update **/
 app.put("/player", async (req, res) => {
-  // const name = req.body.name;
-  // const lastName = req.body.lastName;
-  // const nationality = req.body.nationality;
-  // const birthday = req.body.birthday;
-  // const position = req.body.position;
-  // const team = req.body.team;
+  const { _id, name, lastName, birthday, position, team } = req.body;
+  const playerDocuments = await db.collection("Players").doc(_id);
+  await playerDocuments.update({
+    name,
+    lastName,
+    birthday,
+    position,
+    team,
+  });
+  const playerObj = (await db.collection("Players").doc(_id).get()).data();
+  return res.json({
+    result: true,
+    playerObj,
+  });
 });
 
 //** GetAll **/
@@ -187,7 +204,12 @@ app.get("/player", async (req, res) => {
   const playerDocuments = await db.collection("Players").get();
   res.status(200).json({
     result: true,
-    players: playerDocuments,
+    players: playerDocuments.docs.map((doc) => {
+      return {
+        ...doc.data(),
+        _id: doc.id,
+      };
+    }),
   });
 });
 
@@ -199,20 +221,20 @@ app.get("/player/players", async (req, res) => {
     .get();
   res.status(200).json({
     result: true,
-    nonePlayers: playerDocuments,
+    nonePlayers: playerDocuments.docs.map((doc) => {
+      return {
+        ...doc.data(),
+        _id: doc.id,
+      };
+    }),
   });
 });
 
 //** Delete by name **/
 app.delete("/player/:id", async (req, res) => {
-  const id = req.body.id;
-  const PlayersDocuments = await db.collection("Players").where("id", "==", id);
+  const { id } = req.params;
+  await db.collection("Players").doc(id).delete();
 
-  PlayersDocuments.get().then(function (querySnapshot) {
-    querySnapshot.forEach(function (doc) {
-      doc.ref.delete();
-    });
-  });
   res.status(200).json({
     result: true,
   });
